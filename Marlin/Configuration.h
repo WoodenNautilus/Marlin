@@ -1751,8 +1751,8 @@
 // @section geometry
 
 // The size of the printable area
-#define X_BED_SIZE 235
-#define Y_BED_SIZE 235
+#define X_BED_SIZE 242
+#define Y_BED_SIZE 230
 
 // Travel limits (linear=mm, rotational=°) after homing, corresponding to endstop positions.
 #define X_MIN_POS 0
@@ -2432,8 +2432,8 @@
 
   // Specify positions for each tool as { { X, Y, Z }, { X, Y, Z } }
   // Dual hotend system may use { {  -20, (Y_BED_SIZE / 2), (Z_MIN_POS + 1) },  {  420, (Y_BED_SIZE / 2), (Z_MIN_POS + 1) }}
-  #define NOZZLE_CLEAN_START_POINT { { 55, 10, (Z_MIN_POS + 5) } }
-  #define NOZZLE_CLEAN_END_POINT   { {  0, 0, (Z_MIN_POS + 5) } }
+  #define NOZZLE_CLEAN_START_POINT { { X_MAX_POS, 0, (Z_MIN_POS + 1) } }
+  #define NOZZLE_CLEAN_END_POINT   { {  Y_MAX_POS, 30, (Z_MIN_POS + 1) } }
 
   #if ENABLED(NOZZLE_CLEAN_PATTERN_CIRCLE)
     #define NOZZLE_CLEAN_CIRCLE_RADIUS 6.5                      // (mm) Circular pattern radius
