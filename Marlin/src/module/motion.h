@@ -31,7 +31,7 @@
 #include "../inc/MarlinConfig.h"
 
 #if ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING)
-  #include "../lcd/e3v2/proui/dwin.h"
+  #include "../lcd/e3v2/proui/dwin.h" // for Z_POST_CLEARANCE
 #endif
 
 #if IS_SCARA
@@ -50,7 +50,7 @@ extern xyze_pos_t current_position,  // High-level current tool position
 
 // G60/G61 Position Save and Return
 #if SAVED_POSITIONS
-  extern uint8_t saved_slots[(SAVED_POSITIONS + 7) >> 3]; // TODO: Add support for HAS_I_AXIS
+  extern Flags<SAVED_POSITIONS> did_save_position;
   extern xyze_pos_t stored_position[SAVED_POSITIONS];
 #endif
 
@@ -68,7 +68,7 @@ extern xyz_pos_t cartes;
 #elif defined(XY_PROBE_FEEDRATE)
   #define XY_PROBE_FEEDRATE_MM_S MMM_TO_MMS(XY_PROBE_FEEDRATE)
 #else
-  #define XY_PROBE_FEEDRATE_MM_S PLANNER_XY_FEEDRATE()
+  #define XY_PROBE_FEEDRATE_MM_S PLANNER_XY_FEEDRATE_MM_S
 #endif
 
 #if HAS_BED_PROBE
@@ -141,6 +141,13 @@ XYZ_DEFS(float, base_max_pos,   MAX_POS);
 XYZ_DEFS(float, base_home_pos,  HOME_POS);
 XYZ_DEFS(float, max_length,     MAX_LENGTH);
 XYZ_DEFS(int8_t, home_dir, HOME_DIR);
+
+// Flags for rotational axes
+constexpr AxisFlags rotational{0 LOGICAL_AXIS_GANG(
+    | 0, | 0, | 0, | 0,
+    | (ENABLED(AXIS4_ROTATES)<<I_AXIS), | (ENABLED(AXIS5_ROTATES)<<J_AXIS), | (ENABLED(AXIS6_ROTATES)<<K_AXIS),
+    | (ENABLED(AXIS7_ROTATES)<<U_AXIS), | (ENABLED(AXIS8_ROTATES)<<V_AXIS), | (ENABLED(AXIS9_ROTATES)<<W_AXIS))
+};
 
 inline float home_bump_mm(const AxisEnum axis) {
   static const xyz_pos_t home_bump_mm_P DEFS_PROGMEM = HOMING_BUMP_MM;
@@ -265,7 +272,7 @@ void report_current_position_projected();
   extern AutoReporter<PositionReport> position_auto_reporter;
 #endif
 
-#if ANY(FULL_REPORT_TO_HOST_FEATURE, REALTIME_REPORTING_COMMANDS)
+#if ENABLED(REALTIME_REPORTING_COMMANDS)
   #define HAS_GRBL_STATE 1
   /**
    * Machine states for GRBL or TinyG
@@ -298,11 +305,9 @@ void report_current_position_projected();
     }
   #endif
 
-  #if ENABLED(REALTIME_REPORTING_COMMANDS)
-    void quickpause_stepper();
-    void quickresume_stepper();
-  #endif
-#endif
+  void quickpause_stepper();
+  void quickresume_stepper();
+#endif // REALTIME_REPORTING_COMMANDS
 
 float get_move_distance(const xyze_pos_t &diff OPTARG(HAS_ROTATIONAL_AXES, bool &is_cartesian_move));
 
@@ -385,8 +390,8 @@ void do_blocking_move_to(const xyze_pos_t &raw, const_feedRate_t fr_mm_s=0.0f);
   void do_blocking_move_to_xyzijku_v(const xyze_pos_t &raw, const_float_t v, const_feedRate_t fr_mm_s=0.0f);
 #endif
 #if HAS_W_AXIS
-  void do_blocking_move_to_w(const float rw, const feedRate_t &fr_mm_s=0.0f);
-  void do_blocking_move_to_xyzijkuv_w(const xyze_pos_t &raw, const float w, const feedRate_t &fr_mm_s=0.0f);
+  void do_blocking_move_to_w(const_float_t rw, const_feedRate_t fr_mm_s=0.0f);
+  void do_blocking_move_to_xyzijkuv_w(const xyze_pos_t &raw, const_float_t w, const_feedRate_t fr_mm_s=0.0f);
 #endif
 
 #if HAS_Y_AXIS
@@ -406,12 +411,12 @@ void remember_feedrate_scaling_off();
 void restore_feedrate_and_scaling();
 
 #if HAS_Z_AXIS
-  #if ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING)
-    #define Z_POST_CLEARANCE hmiData.zAfterHoming
-  #elif defined(Z_AFTER_HOMING)
-    #define Z_POST_CLEARANCE Z_AFTER_HOMING
-  #else
-    #define Z_POST_CLEARANCE Z_CLEARANCE_FOR_HOMING
+  #ifndef Z_POST_CLEARANCE  // May be set by proui/dwin.h :-P
+    #ifdef Z_AFTER_HOMING
+      #define Z_POST_CLEARANCE Z_AFTER_HOMING
+    #else
+      #define Z_POST_CLEARANCE Z_CLEARANCE_FOR_HOMING
+    #endif
   #endif
   void do_z_clearance(const_float_t zclear, const bool with_probe=true, const bool lower_allowed=false);
   void do_z_clearance_by(const_float_t zclear);
@@ -626,4 +631,9 @@ void home_if_needed(const bool keeplev=false);
   struct sensorless_t;
   sensorless_t start_sensorless_homing_per_axis(const AxisEnum axis);
   void end_sensorless_homing_per_axis(const AxisEnum axis, sensorless_t enable_stealth);
+#endif
+
+#if HAS_HOMING_CURRENT
+  void set_homing_current(const AxisEnum axis);
+  void restore_homing_current(const AxisEnum axis);
 #endif

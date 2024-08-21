@@ -376,6 +376,8 @@ void MarlinUI::clear_lcd() {
   lcd.clear_buffer();
 }
 
+void MarlinUI::clear_for_drawing() { clear_lcd(); }
+
 #if HAS_LCD_CONTRAST
   void MarlinUI::_set_contrast() { lcd.setContrast(contrast); }
 #endif
@@ -983,7 +985,7 @@ void MarlinUI::draw_status_screen() {
     int8_t llen = ftpl ? expand_u8str(estr, ftpl, itemIndex, itemStringC, itemStringF, n - vlen) : 0;
 
     bool mv_colon = false;
-    if (vlen) {
+    if (vlen && !center) {
       // Move the leading colon from the value to the label below
       mv_colon = (*vstr == ':');
       // Shorter value, wider label
@@ -1086,7 +1088,7 @@ void MarlinUI::draw_status_screen() {
       lcd_moveto(0, row);
       lcd.write(sel ? LCD_STR_ARROW_RIGHT[0] : ' ');
       uint8_t n = LCD_WIDTH - 2;
-      n -= lcd_put_u8str_max(ui.scrolled_filename(theCard, n, row, sel), n);
+      n -= lcd_put_u8str_max(ui.scrolled_filename(theCard, n, sel), n);
       for (; n; --n) lcd.write(' ');
       lcd.write(isDir ? LCD_STR_FOLDER[0] : ' ');
       lcd.print_line();
